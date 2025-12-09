@@ -5,18 +5,19 @@ export type Category = 'card' | 'school' | 'it' | 'other';
 export interface Post {
   id: string;
   type: PostType;
+  category: Category;
   title: string;
   description: string;
-  category: Category;
   location: string;
   date: string;
-  images: string[];
+  contact: string;
+  images: (File | string)[];
   authorId: string;
   authorName: string;
-  contact: string;
+  status: string;
   createdAt: string;
-  status: 'active' | 'resolved';
 }
+
 
 export interface User {
   id: string;

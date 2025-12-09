@@ -1,15 +1,14 @@
-import { useState, useMemo } from 'react';
-import { Header } from '@/components/Header';
-import { SearchBar } from '@/components/SearchBar';
-import { CategoryFilter } from '@/components/CategoryFilter';
-import { TypeFilter } from '@/components/TypeFilter';
-import { PostCard } from '@/components/PostCard';
-import { PostModal } from '@/components/PostModal';
-import { CreatePostModal } from '@/components/CreatePostModal';
-import { EmptyState } from '@/components/EmptyState';
-import { mockPosts } from '@/data/mockPosts';
-import { Post, PostType, Category } from '@/types/post';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect, useMemo } from "react";
+import { Header } from "@/components/Header";
+import { SearchBar } from "@/components/SearchBar";
+import { CategoryFilter } from "@/components/CategoryFilter";
+import { TypeFilter } from "@/components/TypeFilter";
+import { PostCard } from "@/components/PostCard";
+import { PostModal } from "@/components/PostModal";
+import { CreatePostModal } from "@/components/CreatePostModal";
+import { EmptyState } from "@/components/EmptyState";
+import { Post, PostType, Category } from "@/types/post";
+import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +18,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
+import {
+  fetchPosts,
+  createPost,
+  updatePost,
+  deletePost as apiDeletePost,
+} from "@/service/service";
 
 interface HomeProps {
   user: { id: string; name: string; email: string };
@@ -28,67 +33,118 @@ interface HomeProps {
 
 export default function Home({ user, onLogout }: HomeProps) {
   const { toast } = useToast();
-  const [posts, setPosts] = useState<Post[]>(mockPosts);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
-  const [selectedType, setSelectedType] = useState<PostType | 'all'>('all');
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] =
+    useState<Category | "all">("all");
+  const [selectedType, setSelectedType] =
+    useState<PostType | "all">("all");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editPost, setEditPost] = useState<Post | null>(null);
   const [deletePost, setDeletePost] = useState<Post | null>(null);
 
+  /* ===== load posts ===== */
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const data = await fetchPosts();
+        setPosts(data.map((p: any) => ({ ...p, id: p._id })));
+      } catch {
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่สามารถโหลดโพสต์ได้",
+          variant: "destructive",
+        });
+      }
+    };
+    loadPosts();
+  }, []);
+
+  /* ===== filter ===== */
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
-        searchQuery === '' ||
-        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.location.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        post.title.toLowerCase().includes(q) ||
+        post.description.toLowerCase().includes(q) ||
+        post.location.toLowerCase().includes(q);
 
-      const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
-      const matchesType = selectedType === 'all' || post.type === selectedType;
+      const matchesCategory =
+        selectedCategory === "all" || post.category === selectedCategory;
+      const matchesType =
+        selectedType === "all" || post.type === selectedType;
 
       return matchesSearch && matchesCategory && matchesType;
     });
   }, [posts, searchQuery, selectedCategory, selectedType]);
 
-  const handleCreatePost = (postData: Omit<Post, 'id' | 'createdAt' | 'status'>) => {
-    if (editPost) {
-      // Update existing post
-      setPosts(prev => prev.map(p => 
-        p.id === editPost.id 
-          ? { ...p, ...postData }
-          : p
-      ));
+  /* ===== create / update ===== */
+  const handleCreateOrUpdatePost = async (
+    post: Omit<Post, "id" | "createdAt" | "status">
+  ) => {
+    try {
+      const formData = new FormData();
+
+      // fields ธรรมดา
+      formData.append("title", post.title);
+      formData.append("description", post.description);
+      formData.append("location", post.location);
+      formData.append("type", post.type);
+      formData.append("category", post.category);
+      formData.append("date", post.date);
+      formData.append("contact", post.contact);
+      formData.append("authorId", post.authorId);
+      formData.append("authorName", post.authorName);
+
+      // images
+      post.images.forEach((img) => {
+        if (typeof img === "string") {
+          formData.append("existingImages", img);
+        } else {
+          formData.append("images", img);
+        }
+      });
+
+      if (editPost) {
+        const updated = await updatePost(editPost.id, formData);
+        setPosts((prev) =>
+          prev.map((p) => (p.id === editPost.id ? updated : p))
+        );
+        toast({ title: "แก้ไขโพสต์สำเร็จ" });
+      } else {
+        const created = await createPost(formData);
+        setPosts((prev) => [{ ...created, id: created._id }, ...prev]);
+        toast({ title: "เพิ่มโพสต์สำเร็จ" });
+      }
+
+      setShowCreateModal(false);
       setEditPost(null);
-    } else {
-      // Create new post
-      const newPost: Post = {
-        ...postData,
-        id: `post-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        status: 'active',
-      };
-      setPosts(prev => [newPost, ...prev]);
+    } catch {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถบันทึกโพสต์ได้",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleEditPost = (post: Post) => {
-    setEditPost(post);
-    setShowCreateModal(true);
-  };
-
-  const handleDeletePost = (post: Post) => {
-    setDeletePost(post);
-  };
-
-  const confirmDelete = () => {
-    if (deletePost) {
-      setPosts(prev => prev.filter(p => p.id !== deletePost.id));
+  /* ===== delete ===== */
+  const confirmDelete = async () => {
+    if (!deletePost) return;
+    try {
+      await apiDeletePost(deletePost.id);
+      setPosts((prev) => prev.filter((p) => p.id !== deletePost.id));
+      toast({ title: "ลบโพสต์สำเร็จ" });
+    } catch {
       toast({
-        title: 'ลบโพสต์สำเร็จ',
-        description: 'โพสต์ของคุณถูกลบแล้ว',
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถลบโพสต์ได้",
+        variant: "destructive",
       });
+    } finally {
       setDeletePost(null);
     }
   };
@@ -106,95 +162,91 @@ export default function Home({ user, onLogout }: HomeProps) {
       />
 
       <main className="container py-6">
-        {/* Hero Section */}
         <section className="mb-8 text-center">
-          <h1 className="mb-2 text-3xl font-bold text-foreground sm:text-4xl">
-            Lost & Found
-          </h1>
+          <h1 className="mb-2 text-3xl font-bold">Lost & Found</h1>
           <p className="text-muted-foreground">
             ค้นหาของที่หายหรือแจ้งพบของ
           </p>
         </section>
 
-        {/* Search */}
-        <section className="mb-6">
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="ค้นหาชื่อ, รายละเอียด, สถานที่..."
-          />
-        </section>
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="ค้นหาชื่อ, รายละเอียด, สถานที่..."
+        />
 
-        {/* Filters */}
-        <section className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="my-6 flex flex-col gap-4 sm:flex-row sm:justify-between">
           <TypeFilter selected={selectedType} onSelect={setSelectedType} />
-          <CategoryFilter selected={selectedCategory} onSelect={setSelectedCategory} />
-        </section>
+          <CategoryFilter
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
+          />
+        </div>
 
-        {/* Results Count */}
-        <section className="mb-4">
-          <p className="text-sm text-muted-foreground">
-            {filteredPosts.length} รายการ
-          </p>
-        </section>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {filteredPosts.length} รายการ
+        </p>
 
-        {/* Posts Grid */}
-        <section>
-          {filteredPosts.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredPosts.map((post, index) => (
-                <div
-                  key={post.id}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                  className="animate-fade-in"
-                >
-                  <PostCard
-                    post={post}
-                    onView={setSelectedPost}
-                    onEdit={handleEditPost}
-                    onDelete={handleDeletePost}
-                    isOwner={post.authorId === user.id}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState type={searchQuery || selectedCategory !== 'all' || selectedType !== 'all' ? 'no-results' : 'no-posts'} />
-          )}
-        </section>
+        {filteredPosts.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredPosts.map((post, index) => (
+              <div key={post.id} style={{ animationDelay: `${index * 50}ms` }}>
+                <PostCard
+                  post={post}
+                  onView={setSelectedPost}
+                  onEdit={(p) => {
+                    setEditPost(p);
+                    setShowCreateModal(true);
+                  }}
+                  onDelete={setDeletePost}
+                  isOwner={post.authorId === user.id}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            type={
+              searchQuery ||
+              selectedCategory !== "all" ||
+              selectedType !== "all"
+                ? "no-results"
+                : "no-posts"
+            }
+          />
+        )}
       </main>
 
-      {/* Modals */}
       <PostModal
         post={selectedPost}
         open={!!selectedPost}
         onClose={() => setSelectedPost(null)}
       />
+
       <CreatePostModal
         open={showCreateModal}
         onClose={() => {
           setShowCreateModal(false);
           setEditPost(null);
         }}
-        onSubmit={handleCreatePost}
-        editPost={editPost}
+        onSubmit={handleCreateOrUpdatePost}
+        editPost={editPost || undefined}
         currentUserId={user.id}
         currentUserName={user.name}
       />
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletePost} onOpenChange={() => setDeletePost(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันการลบโพสต์</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบโพสต์ "{deletePost?.title}" หรือไม่? การกระทำนี้ไม่สามารถยกเลิกได้
+              ต้องการลบ "{deletePost?.title}" หรือไม่
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              ลบโพสต์
+            <AlertDialogAction onClick={confirmDelete}>
+              ลบ
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

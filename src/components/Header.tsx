@@ -16,7 +16,6 @@ export function Header({ onCreatePost, onSearch, onLogout, userName }: HeaderPro
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between">
-        {/* Logo */}
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground">
             <span className="text-lg font-bold text-background">L</span>
@@ -24,16 +23,12 @@ export function Header({ onCreatePost, onSearch, onLogout, userName }: HeaderPro
           <span className="hidden font-semibold sm:inline-block">Lost & Found</span>
         </div>
 
-        {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 md:flex">
           {userName && (
             <span className="mr-2 text-sm text-muted-foreground">
               สวัสดี, {userName}
             </span>
           )}
-          <Button variant="icon" size="icon" onClick={onSearch} aria-label="ค้นหา">
-            <Search className="h-5 w-5" />
-          </Button>
           <Button variant="icon" size="icon" onClick={onCreatePost} aria-label="สร้างโพสต์">
             <Plus className="h-5 w-5" />
           </Button>

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { loginAPI, registerAPI } from "@/service/service";
 
 type AuthMode = 'login' | 'register';
 
@@ -21,38 +22,37 @@ export default function Auth({ onLogin }: AuthProps) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Mock authentication - ในการใช้งานจริงต้องเชื่อมต่อ Backend
-    if (mode === 'login') {
-      // Mock login
-      const mockUser = {
-        id: 'mock-user-1',
-        name: email.split('@')[0],
-        email: email,
-      };
-      onLogin(mockUser);
-      toast({
-        title: 'เข้าสู่ระบบสำเร็จ',
-        description: `ยินดีต้อนรับ ${mockUser.name}`,
-      });
-      navigate('/home');
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    let userData;
+    if (mode === "login") {
+      userData = await loginAPI(email, password); // เรียก backend
     } else {
-      // Mock register
-      const mockUser = {
-        id: 'mock-user-1',
-        name: name,
-        email: email,
-      };
-      onLogin(mockUser);
-      toast({
-        title: 'สมัครสมาชิกสำเร็จ',
-        description: `ยินดีต้อนรับ ${name}`,
-      });
-      navigate('/home');
+      userData = await registerAPI(name, email, password); // สมัครสมาชิก
     }
-  };
+
+    // บันทึก user ลง state ของ App
+    onLogin({
+      id: userData.user._id,
+      name: userData.user.name,
+      email: userData.user.email,
+    });
+
+    toast({
+      title: mode === "login" ? "เข้าสู่ระบบสำเร็จ" : "สมัครสมาชิกสำเร็จ",
+      description: `ยินดีต้อนรับ ${userData.user.name}`,
+    });
+
+    navigate("/home");
+  } catch (err: any) {
+    toast({
+      title: "เกิดข้อผิดพลาด",
+      description: err.response?.data?.message || err.message,
+      variant: "destructive",
+    });
+  }
+};
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -132,7 +132,6 @@ export default function Auth({ onLogin }: AuthProps) {
                 placeholder="รหัสผ่าน"
                 className="pl-10 pr-10"
                 required
-                minLength={6}
               />
               <button
                 type="button"
