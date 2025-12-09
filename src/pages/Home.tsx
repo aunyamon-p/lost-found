@@ -6,44 +6,103 @@ import { TypeFilter } from '@/components/TypeFilter';
 import { PostCard } from '@/components/PostCard';
 import { PostModal } from '@/components/PostModal';
 import { CreatePostModal } from '@/components/CreatePostModal';
-import { AuthModal } from '@/components/AuthModal';
 import { EmptyState } from '@/components/EmptyState';
 import { mockPosts } from '@/data/mockPosts';
 import { Post, PostType, Category } from '@/types/post';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-const Index = () => {
+interface HomeProps {
+  user: { id: string; name: string; email: string };
+  onLogout: () => void;
+}
+
+export default function Home({ user, onLogout }: HomeProps) {
+  const { toast } = useToast();
+  const [posts, setPosts] = useState<Post[]>(mockPosts);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'all'>('all');
   const [selectedType, setSelectedType] = useState<PostType | 'all'>('all');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [editPost, setEditPost] = useState<Post | null>(null);
+  const [deletePost, setDeletePost] = useState<Post | null>(null);
 
   const filteredPosts = useMemo(() => {
-    return mockPosts.filter((post) => {
-      // Search filter
+    return posts.filter((post) => {
       const matchesSearch =
         searchQuery === '' ||
         post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.location.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Category filter
       const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
-
-      // Type filter
       const matchesType = selectedType === 'all' || post.type === selectedType;
 
       return matchesSearch && matchesCategory && matchesType;
     });
-  }, [searchQuery, selectedCategory, selectedType]);
+  }, [posts, searchQuery, selectedCategory, selectedType]);
+
+  const handleCreatePost = (postData: Omit<Post, 'id' | 'createdAt' | 'status'>) => {
+    if (editPost) {
+      // Update existing post
+      setPosts(prev => prev.map(p => 
+        p.id === editPost.id 
+          ? { ...p, ...postData }
+          : p
+      ));
+      setEditPost(null);
+    } else {
+      // Create new post
+      const newPost: Post = {
+        ...postData,
+        id: `post-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        status: 'active',
+      };
+      setPosts(prev => [newPost, ...prev]);
+    }
+  };
+
+  const handleEditPost = (post: Post) => {
+    setEditPost(post);
+    setShowCreateModal(true);
+  };
+
+  const handleDeletePost = (post: Post) => {
+    setDeletePost(post);
+  };
+
+  const confirmDelete = () => {
+    if (deletePost) {
+      setPosts(prev => prev.filter(p => p.id !== deletePost.id));
+      toast({
+        title: 'ลบโพสต์สำเร็จ',
+        description: 'โพสต์ของคุณถูกลบแล้ว',
+      });
+      setDeletePost(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <Header
-        onCreatePost={() => setShowCreateModal(true)}
+        onCreatePost={() => {
+          setEditPost(null);
+          setShowCreateModal(true);
+        }}
         onSearch={() => {}}
-        onAuth={() => setShowAuthModal(true)}
+        onLogout={onLogout}
+        userName={user.name}
       />
 
       <main className="container py-6">
@@ -92,7 +151,9 @@ const Index = () => {
                   <PostCard
                     post={post}
                     onView={setSelectedPost}
-                    isOwner={false}
+                    onEdit={handleEditPost}
+                    onDelete={handleDeletePost}
+                    isOwner={post.authorId === user.id}
                   />
                 </div>
               ))}
@@ -111,14 +172,33 @@ const Index = () => {
       />
       <CreatePostModal
         open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => {
+          setShowCreateModal(false);
+          setEditPost(null);
+        }}
+        onSubmit={handleCreatePost}
+        editPost={editPost}
+        currentUserId={user.id}
+        currentUserName={user.name}
       />
-      <AuthModal
-        open={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletePost} onOpenChange={() => setDeletePost(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบโพสต์</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณต้องการลบโพสต์ "{deletePost?.title}" หรือไม่? การกระทำนี้ไม่สามารถยกเลิกได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              ลบโพสต์
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-};
-
-export default Index;
+}

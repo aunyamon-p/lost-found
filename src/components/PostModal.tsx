@@ -1,4 +1,4 @@
-import { X, MapPin, Calendar, User, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
+import { X, MapPin, Calendar, User, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
 import { Post, categoryLabels } from '@/types/post';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -134,10 +134,14 @@ export function PostModal({ post, open, onClose }: PostModalProps) {
             </span>
           </div>
 
-          <Button className="w-full gap-2" size="lg">
-            <MessageCircle className="h-5 w-5" />
-            ติดต่อ
-          </Button>
+          {/* Contact Info */}
+          <div className="rounded-lg border border-border bg-muted/50 p-4">
+            <div className="flex items-center gap-2 text-foreground">
+              <Phone className="h-5 w-5" />
+              <span className="font-medium">ช่องทางติดต่อ:</span>
+            </div>
+            <p className="mt-2 text-muted-foreground">{post.contact}</p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

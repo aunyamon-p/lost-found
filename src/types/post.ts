@@ -13,6 +13,7 @@ export interface Post {
   images: string[];
   authorId: string;
   authorName: string;
+  contact: string;
   createdAt: string;
   status: 'active' | 'resolved';
 }

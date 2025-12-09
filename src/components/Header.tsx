@@ -1,4 +1,4 @@
-import { Search, Plus, User, Menu, X } from 'lucide-react';
+import { Search, Plus, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 interface HeaderProps {
   onCreatePost: () => void;
   onSearch: () => void;
-  onAuth: () => void;
+  onLogout: () => void;
+  userName?: string;
 }
 
-export function Header({ onCreatePost, onSearch, onAuth }: HeaderProps) {
+export function Header({ onCreatePost, onSearch, onLogout, userName }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -25,14 +26,19 @@ export function Header({ onCreatePost, onSearch, onAuth }: HeaderProps) {
 
         {/* Desktop Navigation */}
         <nav className="hidden items-center gap-1 md:flex">
+          {userName && (
+            <span className="mr-2 text-sm text-muted-foreground">
+              สวัสดี, {userName}
+            </span>
+          )}
           <Button variant="icon" size="icon" onClick={onSearch} aria-label="ค้นหา">
             <Search className="h-5 w-5" />
           </Button>
           <Button variant="icon" size="icon" onClick={onCreatePost} aria-label="สร้างโพสต์">
             <Plus className="h-5 w-5" />
           </Button>
-          <Button variant="icon" size="icon" onClick={onAuth} aria-label="บัญชีผู้ใช้">
-            <User className="h-5 w-5" />
+          <Button variant="icon" size="icon" onClick={onLogout} aria-label="ออกจากระบบ">
+            <LogOut className="h-5 w-5" />
           </Button>
         </nav>
 
@@ -57,6 +63,11 @@ export function Header({ onCreatePost, onSearch, onAuth }: HeaderProps) {
         )}
       >
         <nav className="container flex flex-col gap-2 py-4">
+          {userName && (
+            <div className="mb-2 text-sm text-muted-foreground">
+              สวัสดี, {userName}
+            </div>
+          )}
           <Button
             variant="ghost"
             className="justify-start gap-3"
@@ -83,12 +94,12 @@ export function Header({ onCreatePost, onSearch, onAuth }: HeaderProps) {
             variant="ghost"
             className="justify-start gap-3"
             onClick={() => {
-              onAuth();
+              onLogout();
               setMobileMenuOpen(false);
             }}
           >
-            <User className="h-5 w-5" />
-            เข้าสู่ระบบ
+            <LogOut className="h-5 w-5" />
+            ออกจากระบบ
           </Button>
         </nav>
       </div>
