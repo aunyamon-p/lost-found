@@ -16,7 +16,6 @@ export const fetchPosts = async (): Promise<Post[]> => {
   }));
 };
 
-
 export const createPost = async (data: any) => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("ไม่พบ token");
