@@ -1,16 +1,20 @@
-import { useState } from 'react';
-import { X, Upload, Image as ImageIcon, CreditCard, BookOpen, Laptop, Package, Search, Eye } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Upload, CreditCard, BookOpen, Laptop, Package, Search, Eye, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PostType, Category } from '@/types/post';
+import { Post, PostType, Category } from '@/types/post';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 interface CreatePostModalProps {
   open: boolean;
   onClose: () => void;
+  onSubmit: (post: Omit<Post, 'id' | 'createdAt' | 'status'>) => void;
+  editPost?: Post | null;
+  currentUserId: string;
+  currentUserName: string;
 }
 
 const types = [
@@ -25,7 +29,7 @@ const categories = [
   { id: 'other' as const, icon: Package, label: 'อื่นๆ' },
 ];
 
-export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
+export function CreatePostModal({ open, onClose, onSubmit, editPost, currentUserId, currentUserName }: CreatePostModalProps) {
   const { toast } = useToast();
   const [type, setType] = useState<PostType>('lost');
   const [category, setCategory] = useState<Category>('other');
@@ -33,7 +37,30 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [date, setDate] = useState('');
+  const [contact, setContact] = useState('');
   const [images, setImages] = useState<string[]>([]);
+
+  // Set default date to today
+  useEffect(() => {
+    if (!editPost) {
+      const today = new Date().toISOString().split('T')[0];
+      setDate(today);
+    }
+  }, [open, editPost]);
+
+  // Load edit post data
+  useEffect(() => {
+    if (editPost) {
+      setType(editPost.type);
+      setCategory(editPost.category);
+      setTitle(editPost.title);
+      setDescription(editPost.description);
+      setLocation(editPost.location);
+      setDate(editPost.date);
+      setContact(editPost.contact);
+      setImages(editPost.images);
+    }
+  }, [editPost]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -51,18 +78,34 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     e.preventDefault();
     
     // Validation
-    if (!title.trim() || !description.trim() || !location.trim() || !date) {
+    if (!title.trim() || !description.trim() || !location.trim() || !date || !contact.trim()) {
       toast({
         title: 'กรุณากรอกข้อมูลให้ครบ',
-        description: 'กรุณากรอกข้อมูลที่จำเป็นทั้งหมด',
+        description: 'กรุณากรอกข้อมูลที่จำเป็นทั้งหมด รวมถึงช่องทางติดต่อ',
         variant: 'destructive',
       });
       return;
     }
 
+    onSubmit({
+      type,
+      category,
+      title: title.trim(),
+      description: description.trim(),
+      location: location.trim(),
+      date,
+      contact: contact.trim(),
+      images,
+      authorId: currentUserId,
+      authorName: currentUserName,
+    });
+
+    resetForm();
+    onClose();
+    
     toast({
-      title: 'ต้องเข้าสู่ระบบก่อน',
-      description: 'กรุณาเชื่อมต่อ Lovable Cloud เพื่อใช้งานฟีเจอร์นี้',
+      title: editPost ? 'แก้ไขโพสต์สำเร็จ' : 'ลงประกาศสำเร็จ',
+      description: editPost ? 'โพสต์ของคุณถูกแก้ไขแล้ว' : 'โพสต์ของคุณถูกเผยแพร่แล้ว',
     });
   };
 
@@ -72,7 +115,8 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     setTitle('');
     setDescription('');
     setLocation('');
-    setDate('');
+    setDate(new Date().toISOString().split('T')[0]);
+    setContact('');
     setImages([]);
   };
 
@@ -85,7 +129,9 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
     }}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">ลงประกาศ</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">
+            {editPost ? 'แก้ไขโพสต์' : 'ลงประกาศ'}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -194,6 +240,23 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
             />
           </div>
 
+          {/* Contact */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-muted-foreground">
+              ช่องทางติดต่อ
+            </label>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+                placeholder="เช่น Line: myid, Tel: 08x-xxx-xxxx"
+                className="pl-10"
+                maxLength={100}
+              />
+            </div>
+          </div>
+
           {/* Image Upload */}
           <div>
             <label className="mb-2 block text-sm font-medium text-muted-foreground">
@@ -237,7 +300,7 @@ export function CreatePostModal({ open, onClose }: CreatePostModalProps) {
             size="lg"
             variant={type === 'lost' ? 'lost' : 'found'}
           >
-            {type === 'lost' ? 'ประกาศของหาย' : 'ประกาศเจอของ'}
+            {editPost ? 'บันทึกการแก้ไข' : type === 'lost' ? 'ประกาศของหาย' : 'ประกาศเจอของ'}
           </Button>
         </form>
       </DialogContent>
