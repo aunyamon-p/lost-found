@@ -7,9 +7,7 @@ const AUTH_URL = 'http://localhost:5000/api/auth';
 export const fetchPosts = async (): Promise<Post[]> => {
   const res = await fetch(API_URL);
   if (!res.ok) throw new Error('Failed to fetch posts');
-
   const data = await res.json();
-
   return data.map((post: any) => ({
     ...post,
     id: post._id, 
@@ -19,7 +17,6 @@ export const fetchPosts = async (): Promise<Post[]> => {
 export const createPost = async (data: any) => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("ไม่พบ token");
-
   const res = await axios.post(API_URL, data, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -39,7 +36,6 @@ export const updatePost = async (id: string, data: any) => {
 export const deletePost = async (id: string) => {
   const token = localStorage.getItem('token');
   if (!token) throw new Error('ไม่พบ token');
-
   await axios.delete(`${API_URL}/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });

@@ -35,17 +35,18 @@ export default function Home({ user, onLogout }: HomeProps) {
   const { toast } = useToast();
 
   const [posts, setPosts] = useState<Post[]>([]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] =
     useState<Category | "all">("all");
   const [selectedType, setSelectedType] =
     useState<PostType | "all">("all");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editPost, setEditPost] = useState<Post | null>(null);
   const [deletePost, setDeletePost] = useState<Post | null>(null);
 
-  /* ===== load posts ===== */
   useEffect(() => {
     const loadPosts = async () => {
       try {
@@ -62,7 +63,6 @@ export default function Home({ user, onLogout }: HomeProps) {
     loadPosts();
   }, []);
 
-  /* ===== filter ===== */
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
       const q = searchQuery.toLowerCase();
@@ -71,24 +71,20 @@ export default function Home({ user, onLogout }: HomeProps) {
         post.title.toLowerCase().includes(q) ||
         post.description.toLowerCase().includes(q) ||
         post.location.toLowerCase().includes(q);
-
       const matchesCategory =
         selectedCategory === "all" || post.category === selectedCategory;
       const matchesType =
         selectedType === "all" || post.type === selectedType;
-
       return matchesSearch && matchesCategory && matchesType;
     });
   }, [posts, searchQuery, selectedCategory, selectedType]);
 
-  /* ===== create / update ===== */
   const handleCreateOrUpdatePost = async (
     post: Omit<Post, "id" | "createdAt" | "status">
   ) => {
     try {
       const formData = new FormData();
 
-      // fields ธรรมดา
       formData.append("title", post.title);
       formData.append("description", post.description);
       formData.append("location", post.location);
@@ -99,7 +95,6 @@ export default function Home({ user, onLogout }: HomeProps) {
       formData.append("authorId", post.authorId);
       formData.append("authorName", post.authorName);
 
-      // images
       post.images.forEach((img) => {
         if (typeof img === "string") {
           formData.append("existingImages", img);
@@ -131,7 +126,6 @@ export default function Home({ user, onLogout }: HomeProps) {
     }
   };
 
-  /* ===== delete ===== */
   const confirmDelete = async () => {
     if (!deletePost) return;
     try {
@@ -172,9 +166,8 @@ export default function Home({ user, onLogout }: HomeProps) {
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="ค้นหาชื่อ, รายละเอียด, สถานที่..."
-        />
-
+          placeholder="ค้นหาชื่อ, รายละเอียด, สถานที่..."/>
+        
         <div className="my-6 flex flex-col gap-4 sm:flex-row sm:justify-between">
           <TypeFilter selected={selectedType} onSelect={setSelectedType} />
           <CategoryFilter

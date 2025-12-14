@@ -27,12 +27,11 @@ export default function Auth({ onLogin }: AuthProps) {
   try {
     let userData;
     if (mode === "login") {
-      userData = await loginAPI(email, password); // เรียก backend
+      userData = await loginAPI(email, password);
     } else {
-      userData = await registerAPI(name, email, password); // สมัครสมาชิก
+      userData = await registerAPI(name, email, password);
     }
 
-    // บันทึก user ลง state ของ App
     onLogin({
       id: userData.user._id,
       name: userData.user.name,
@@ -57,7 +56,6 @@ export default function Auth({ onLogin }: AuthProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
-        {/* Logo */}
         <div className="text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-foreground">
             <span className="text-3xl font-bold text-background">L</span>
@@ -66,9 +64,7 @@ export default function Auth({ onLogin }: AuthProps) {
           <p className="mt-2 text-muted-foreground">ค้นหาของที่หายหรือแจ้งพบของ</p>
         </div>
 
-        {/* Auth Card */}
         <div className="rounded-2xl border border-border bg-card p-8 shadow-card">
-          {/* Mode Toggle */}
           <div className="mb-6 flex rounded-lg bg-muted p-1">
             <button
               type="button"
@@ -147,10 +143,6 @@ export default function Auth({ onLogin }: AuthProps) {
             </Button>
           </form>
         </div>
-
-        <p className="text-center text-sm text-muted-foreground">
-          ระบบสำหรับนักศึกษาเท่านั้น
-        </p>
       </div>
     </div>
   );
